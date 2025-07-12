@@ -520,7 +520,7 @@ class TradingSimulator:
             st.session_state.last_update = datetime.now()
     
     def get_available_stocks(self) -> List[str]:
-        """Get list of available stocks for trading"""
+        """Get list of available stocks and cryptocurrencies for trading"""
         return [
             # Large Cap Tech
             'AAPL', 'MSFT', 'GOOGL', 'GOOG', 'AMZN', 'NVDA', 'TSLA', 'META', 'NFLX', 'ADBE',
@@ -546,19 +546,58 @@ class TradingSimulator:
             # ETFs
             'SPY', 'QQQ', 'IWM', 'VTI', 'VOO', 'VEA', 'VWO', 'BND', 'AGG',
             'XLE', 'XLF', 'XLK', 'XLV', 'XLI', 'XLU', 'XLP', 'XLY', 'XLB',
+            
+            # Cryptocurrencies (USD pairs)
+            'BTC-USD', 'ETH-USD', 'BNB-USD', 'XRP-USD', 'SOL-USD', 'ADA-USD', 'AVAX-USD',
+            'DOT-USD', 'DOGE-USD', 'SHIB-USD', 'MATIC-USD', 'LTC-USD', 'BCH-USD', 'LINK-USD',
+            'UNI-USD', 'ATOM-USD', 'XLM-USD', 'VET-USD', 'FIL-USD', 'TRX-USD', 'ETC-USD',
+            'ALGO-USD', 'MANA-USD', 'SAND-USD', 'AXS-USD', 'THETA-USD', 'AAVE-USD', 'COMP-USD',
+            'MKR-USD', 'SNX-USD', 'SUSHI-USD', 'YFI-USD', 'BAT-USD', 'ZRX-USD', 'ENJ-USD',
+            'CRV-USD', 'GALA-USD', 'CHZ-USD', 'FLOW-USD', 'ICP-USD', 'NEAR-USD', 'APT-USD',
+            'ARB-USD', 'OP-USD', 'PEPE-USD', 'FLOKI-USD', 'BONK-USD'
         ]
+    
+    def get_crypto_categories(self) -> Dict[str, List[str]]:
+        """Get categorized cryptocurrency list"""
+        return {
+            "Major Cryptocurrencies": [
+                'BTC-USD', 'ETH-USD', 'BNB-USD', 'XRP-USD', 'SOL-USD', 'ADA-USD', 'AVAX-USD', 'DOT-USD'
+            ],
+            "DeFi Tokens": [
+                'UNI-USD', 'AAVE-USD', 'COMP-USD', 'MKR-USD', 'SNX-USD', 'SUSHI-USD', 'YFI-USD', 'CRV-USD'
+            ],
+            "Meme Coins": [
+                'DOGE-USD', 'SHIB-USD', 'PEPE-USD', 'FLOKI-USD', 'BONK-USD'
+            ],
+            "Layer 1 & 2": [
+                'MATIC-USD', 'ATOM-USD', 'NEAR-USD', 'APT-USD', 'ARB-USD', 'OP-USD', 'ICP-USD'
+            ],
+            "Altcoins": [
+                'LTC-USD', 'BCH-USD', 'LINK-USD', 'XLM-USD', 'VET-USD', 'FIL-USD', 'TRX-USD', 'ETC-USD', 'ALGO-USD'
+            ],
+            "Gaming & NFT": [
+                'MANA-USD', 'SAND-USD', 'AXS-USD', 'THETA-USD', 'GALA-USD', 'CHZ-USD', 'FLOW-USD', 'ENJ-USD'
+            ],
+            "Utility Tokens": [
+                'BAT-USD', 'ZRX-USD'
+            ]
+        }
+    
+    def is_crypto(self, symbol: str) -> bool:
+        """Check if symbol is a cryptocurrency"""
+        return symbol.endswith('-USD')
     
     @st.cache_data(ttl=300)
     def get_stock_price(_self, symbol: str) -> Dict:
-        """Get current stock price and info with error handling"""
+        """Get current stock/crypto price and info with error handling"""
         try:
-            stock = yf.Ticker(symbol)
-            hist = stock.history(period="5d")
+            ticker = yf.Ticker(symbol)
+            hist = ticker.history(period="5d")
             
             if hist.empty:
                 return None
                 
-            info = stock.info
+            info = ticker.info
             
             current_price = hist['Close'].iloc[-1]
             prev_close = info.get('previousClose', current_price)
@@ -568,19 +607,82 @@ class TradingSimulator:
             change = current_price - prev_close
             change_percent = (change / prev_close) * 100 if prev_close > 0 else 0
             
+            # Determine if it's crypto
+            is_crypto = symbol.endswith('-USD')
+            
+            # Get appropriate name
+            if is_crypto:
+                display_name = symbol.replace('-USD', '')
+                long_name = info.get('longName', display_name)
+                if long_name == display_name:
+                    # Create better display names for crypto
+                    crypto_names = {
+                        'BTC': 'Bitcoin',
+                        'ETH': 'Ethereum',
+                        'BNB': 'Binance Coin',
+                        'XRP': 'XRP',
+                        'SOL': 'Solana',
+                        'ADA': 'Cardano',
+                        'AVAX': 'Avalanche',
+                        'DOT': 'Polkadot',
+                        'DOGE': 'Dogecoin',
+                        'SHIB': 'Shiba Inu',
+                        'MATIC': 'Polygon',
+                        'LTC': 'Litecoin',
+                        'BCH': 'Bitcoin Cash',
+                        'LINK': 'Chainlink',
+                        'UNI': 'Uniswap',
+                        'ATOM': 'Cosmos',
+                        'XLM': 'Stellar',
+                        'VET': 'VeChain',
+                        'FIL': 'Filecoin',
+                        'TRX': 'TRON',
+                        'ETC': 'Ethereum Classic',
+                        'ALGO': 'Algorand',
+                        'MANA': 'Decentraland',
+                        'SAND': 'The Sandbox',
+                        'AXS': 'Axie Infinity',
+                        'THETA': 'Theta Network',
+                        'AAVE': 'Aave',
+                        'COMP': 'Compound',
+                        'MKR': 'Maker',
+                        'SNX': 'Synthetix',
+                        'SUSHI': 'SushiSwap',
+                        'YFI': 'yearn.finance',
+                        'BAT': 'Basic Attention Token',
+                        'ZRX': '0x Protocol',
+                        'ENJ': 'Enjin Coin',
+                        'CRV': 'Curve DAO',
+                        'GALA': 'Gala',
+                        'CHZ': 'Chiliz',
+                        'FLOW': 'Flow',
+                        'ICP': 'Internet Computer',
+                        'NEAR': 'NEAR Protocol',
+                        'APT': 'Aptos',
+                        'ARB': 'Arbitrum',
+                        'OP': 'Optimism',
+                        'PEPE': 'Pepe',
+                        'FLOKI': 'Floki Inu',
+                        'BONK': 'Bonk'
+                    }
+                    long_name = crypto_names.get(display_name, display_name)
+            else:
+                long_name = info.get('longName', symbol)
+            
             return {
                 'symbol': symbol,
-                'name': info.get('longName', symbol)[:50],
+                'name': long_name[:50],
                 'price': float(current_price),
                 'change': float(change),
                 'change_percent': float(change_percent),
                 'volume': int(hist['Volume'].iloc[-1]) if len(hist) > 0 and not pd.isna(hist['Volume'].iloc[-1]) else 0,
                 'market_cap': info.get('marketCap', 0),
-                'pe_ratio': info.get('trailingPE', 0),
+                'pe_ratio': info.get('trailingPE', 0) if not is_crypto else None,
                 'day_high': float(hist['High'].iloc[-1]) if len(hist) > 0 else current_price,
                 'day_low': float(hist['Low'].iloc[-1]) if len(hist) > 0 else current_price,
-                'sector': info.get('sector', 'Unknown'),
-                'industry': info.get('industry', 'Unknown'),
+                'sector': info.get('sector', 'Cryptocurrency' if is_crypto else 'Unknown'),
+                'industry': info.get('industry', 'Digital Currency' if is_crypto else 'Unknown'),
+                'is_crypto': is_crypto,
                 'last_updated': datetime.now()
             }
         except Exception as e:
@@ -608,16 +710,21 @@ class TradingSimulator:
             return 0
     
     def create_stock_price_chart(self, symbol: str, period: str = "3mo"):
-        """Create comprehensive stock price chart with technical indicators"""
+        """Create comprehensive stock/crypto price chart with technical indicators"""
         try:
-            stock = yf.Ticker(symbol)
-            hist = stock.history(period=period)
+            ticker = yf.Ticker(symbol)
+            hist = ticker.history(period=period)
             
             if hist.empty:
                 st.warning(f"No data available for {symbol} for the selected period")
                 return None
             
             fig = go.Figure()
+            
+            # Determine if it's crypto for chart title
+            is_crypto = symbol.endswith('-USD')
+            display_name = symbol.replace('-USD', '') if is_crypto else symbol
+            asset_type = "Cryptocurrency" if is_crypto else "Stock"
             
             # Candlestick chart
             fig.add_trace(go.Candlestick(
@@ -652,13 +759,17 @@ class TradingSimulator:
                     line=dict(color='blue', width=2)
                 ))
             
+            # Price formatting for crypto vs stocks
+            price_format = ".6f" if is_crypto and hist['Close'].iloc[-1] < 1 else ".2f"
+            
             fig.update_layout(
-                title=f"{symbol} - Stock Price Analysis ({period})",
+                title=f"{display_name} - {asset_type} Price Analysis ({period})",
                 yaxis_title="Price ($)",
                 xaxis_title="Date",
                 template="plotly_white",
                 height=600,
-                showlegend=True
+                showlegend=True,
+                yaxis=dict(tickformat=f"${price_format}")
             )
             
             fig.update_layout(xaxis_rangeslider_visible=False)
@@ -666,7 +777,7 @@ class TradingSimulator:
             return fig
             
         except Exception as e:
-            st.error(f"Error creating stock chart for {symbol}: {str(e)}")
+            st.error(f"Error creating chart for {symbol}: {str(e)}")
             return None
     
     def create_portfolio_pie_chart(self, user_id: str):
@@ -908,16 +1019,45 @@ def main():
             tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["📊 Research", "💰 Trade", "📈 Portfolio", "📋 History", "🏆 Leaderboard", "⚙️ Settings"])
             
             with tab1:
-                st.subheader("📊 Stock Research & Analysis")
+                st.subheader("📊 Stock & Crypto Research & Analysis")
                 
-                # Stock selector for analysis
-                analysis_stock = st.selectbox(
-                    "Select Stock for Analysis",
-                    [''] + simulator.available_stocks[:100],
-                    key="analysis_stock"
+                # Asset type selector
+                asset_type = st.selectbox(
+                    "Select Asset Type",
+                    ["All Assets", "Stocks & ETFs", "Cryptocurrencies"],
+                    key="asset_type_filter"
                 )
                 
-                if analysis_stock:
+                # Filter available assets based on selection
+                if asset_type == "Stocks & ETFs":
+                    available_assets = [s for s in simulator.available_stocks if not s.endswith('-USD')]
+                elif asset_type == "Cryptocurrencies":
+                    available_assets = [s for s in simulator.available_stocks if s.endswith('-USD')]
+                else:
+                    available_assets = simulator.available_stocks
+                
+                # For crypto, show by categories
+                if asset_type == "Cryptocurrencies":
+                    st.write("### 🪙 Cryptocurrency Categories")
+                    crypto_categories = simulator.get_crypto_categories()
+                    
+                    selected_category = st.selectbox(
+                        "Select Category",
+                        ["All Cryptocurrencies"] + list(crypto_categories.keys()),
+                        key="crypto_category"
+                    )
+                    
+                    if selected_category != "All Cryptocurrencies":
+                        available_assets = crypto_categories[selected_category]
+                
+                # Asset selector for analysis
+                analysis_asset = st.selectbox(
+                    "Select Asset for Analysis",
+                    [''] + available_assets[:100],
+                    key="analysis_asset"
+                )
+                
+                if analysis_asset:
                     # Time period selector
                     period_options = {
                         '1 Month': '1mo',
@@ -936,29 +1076,63 @@ def main():
                     
                     period = period_options[selected_period]
                     
-                    # Get stock info
-                    stock_data = simulator.get_stock_price(analysis_stock)
-                    if stock_data:
-                        st.write(f"**{stock_data['name']}** ({analysis_stock})")
+                    # Get asset info
+                    asset_data = simulator.get_stock_price(analysis_asset)
+                    if asset_data:
+                        # Display asset info with crypto-specific styling
+                        asset_display_name = analysis_asset.replace('-USD', '') if asset_data.get('is_crypto') else analysis_asset
+                        asset_type_icon = "🪙" if asset_data.get('is_crypto') else "📈"
+                        
+                        st.write(f"{asset_type_icon} **{asset_data['name']}** ({asset_display_name})")
+                        
+                        # Show sector/category
+                        if asset_data.get('is_crypto'):
+                            st.write(f"**Category:** {asset_data['sector']}")
+                        else:
+                            st.write(f"**Sector:** {asset_data['sector']}")
                         
                         # Current price and change
                         col_price1, col_price2 = st.columns(2)
                         with col_price1:
-                            st.metric("Current Price", f"${stock_data['price']:.2f}")
+                            # Format price based on asset type
+                            if asset_data.get('is_crypto') and asset_data['price'] < 1:
+                                price_display = f"${asset_data['price']:.6f}"
+                            else:
+                                price_display = f"${asset_data['price']:.2f}"
+                            st.metric("Current Price", price_display)
                         with col_price2:
-                            change_color = "normal" if stock_data['change'] >= 0 else "inverse"
+                            change_color = "normal" if asset_data['change'] >= 0 else "inverse"
                             st.metric(
                                 "Change", 
-                                f"${stock_data['change']:+.2f}",
-                                f"{stock_data['change_percent']:+.2f}%",
+                                f"${asset_data['change']:+.2f}",
+                                f"{asset_data['change_percent']:+.2f}%",
                                 delta_color=change_color
                             )
+                        
+                        # Additional metrics
+                        col_info1, col_info2, col_info3 = st.columns(3)
+                        with col_info1:
+                            st.metric("Volume", f"{asset_data['volume']:,}")
+                        with col_info2:
+                            if asset_data['market_cap'] > 0:
+                                if asset_data['market_cap'] > 1_000_000_000:
+                                    cap_display = f"${asset_data['market_cap']/1_000_000_000:.1f}B"
+                                else:
+                                    cap_display = f"${asset_data['market_cap']/1_000_000:.1f}M"
+                                st.metric("Market Cap", cap_display)
+                            else:
+                                st.metric("Market Cap", "N/A")
+                        with col_info3:
+                            if asset_data.get('pe_ratio') and not asset_data.get('is_crypto'):
+                                st.metric("P/E Ratio", f"{asset_data['pe_ratio']:.2f}")
+                            else:
+                                st.metric("24h High", f"${asset_data['day_high']:.2f}")
                         
                         # Charts section
                         st.write("### 📊 Price Chart")
                         
                         with st.spinner("Loading price chart..."):
-                            price_chart = simulator.create_stock_price_chart(analysis_stock, period)
+                            price_chart = simulator.create_stock_price_chart(analysis_asset, period)
                             if price_chart:
                                 st.plotly_chart(price_chart, use_container_width=True)
                             else:
@@ -969,147 +1143,207 @@ def main():
                         quick_col1, quick_col2 = st.columns(2)
                         
                         with quick_col1:
-                            if st.button(f"🛒 Buy {analysis_stock}", key="quick_buy"):
-                                st.session_state.quick_trade_stock = analysis_stock
+                            buy_button_text = f"🛒 Buy {asset_display_name}"
+                            if st.button(buy_button_text, key="quick_buy"):
+                                st.session_state.quick_trade_asset = analysis_asset
                                 st.session_state.quick_trade_action = 'BUY'
-                                st.info(f"Go to Trade tab to buy {analysis_stock}")
+                                st.info(f"Go to Trade tab to buy {asset_display_name}")
                         
                         with quick_col2:
-                            # Check if user owns this stock
+                            # Check if user owns this asset
                             portfolio = simulator.db.get_user_portfolio(current_user['id'])
-                            owns_stock = any(p['symbol'] == analysis_stock for p in portfolio)
+                            owns_asset = any(p['symbol'] == analysis_asset for p in portfolio)
                             
-                            if owns_stock:
-                                if st.button(f"💰 Sell {analysis_stock}", key="quick_sell"):
-                                    st.session_state.quick_trade_stock = analysis_stock
+                            sell_button_text = f"💰 Sell {asset_display_name}"
+                            if owns_asset:
+                                if st.button(sell_button_text, key="quick_sell"):
+                                    st.session_state.quick_trade_asset = analysis_asset
                                     st.session_state.quick_trade_action = 'SELL'
-                                    st.info(f"Go to Trade tab to sell {analysis_stock}")
+                                    st.info(f"Go to Trade tab to sell {asset_display_name}")
                             else:
-                                st.button(f"💰 Sell {analysis_stock}", key="quick_sell", disabled=True, help="You don't own this stock")
+                                st.button(sell_button_text, key="quick_sell", disabled=True, help="You don't own this asset")
                     
                     else:
-                        st.error("Unable to load stock data")
+                        st.error("Unable to load asset data")
             
             with tab2:
-                st.subheader("🛒 Buy & Sell Stocks")
+                st.subheader("🛒 Trade Stocks & Cryptocurrencies")
                 
                 # Check for quick trade from research tab
-                if 'quick_trade_stock' in st.session_state and st.session_state.quick_trade_stock:
-                    st.info(f"🎯 Quick Trade: {st.session_state.quick_trade_action} {st.session_state.quick_trade_stock}")
+                if 'quick_trade_asset' in st.session_state and st.session_state.quick_trade_asset:
+                    asset_display = st.session_state.quick_trade_asset.replace('-USD', '') if st.session_state.quick_trade_asset.endswith('-USD') else st.session_state.quick_trade_asset
+                    st.info(f"🎯 Quick Trade: {st.session_state.quick_trade_action} {asset_display}")
                 
                 col1, col2 = st.columns(2)
                 
                 with col1:
-                    st.write("### 📈 Buy Stocks")
+                    st.write("### 📈 Buy Assets")
                     
-                    # Pre-select stock from research tab if available
-                    buy_stock_options = [''] + simulator.available_stocks[:50]
+                    # Asset type filter for buying
+                    buy_asset_type = st.selectbox(
+                        "Asset Type",
+                        ["All Assets", "Stocks & ETFs", "Cryptocurrencies"],
+                        key="buy_asset_type"
+                    )
+                    
+                    # Filter assets
+                    if buy_asset_type == "Stocks & ETFs":
+                        buy_options = [s for s in simulator.available_stocks if not s.endswith('-USD')]
+                    elif buy_asset_type == "Cryptocurrencies":
+                        buy_options = [s for s in simulator.available_stocks if s.endswith('-USD')]
+                    else:
+                        buy_options = simulator.available_stocks
+                    
+                    # Pre-select asset from research tab if available
+                    buy_asset_options = [''] + buy_options[:100]
                     default_buy_index = 0
                     
-                    if 'quick_trade_stock' in st.session_state and st.session_state.quick_trade_stock in buy_stock_options:
+                    if 'quick_trade_asset' in st.session_state and st.session_state.quick_trade_asset in buy_asset_options:
                         if st.session_state.get('quick_trade_action') == 'BUY':
-                            default_buy_index = buy_stock_options.index(st.session_state.quick_trade_stock)
+                            default_buy_index = buy_asset_options.index(st.session_state.quick_trade_asset)
                     
-                    selected_stock = st.selectbox(
-                        "Select Stock",
-                        buy_stock_options,
-                        key="buy_stock",
+                    selected_asset = st.selectbox(
+                        "Select Asset",
+                        buy_asset_options,
+                        key="buy_asset",
                         index=default_buy_index
                     )
                     
-                    if selected_stock:
-                        stock_data = simulator.get_stock_price(selected_stock)
-                        if stock_data:
-                            st.write(f"**{stock_data['name']}**")
-                            st.write(f"**Current Price:** ${stock_data['price']:.2f}")
+                    if selected_asset:
+                        asset_data = simulator.get_stock_price(selected_asset)
+                        if asset_data:
+                            # Display asset info
+                            asset_display_name = selected_asset.replace('-USD', '') if asset_data.get('is_crypto') else selected_asset
+                            asset_type_icon = "🪙" if asset_data.get('is_crypto') else "📈"
                             
-                            change_class = "positive" if stock_data['change'] >= 0 else "negative"
-                            st.markdown(f"**Change:** <span class='{change_class}'>${stock_data['change']:+.2f} ({stock_data['change_percent']:+.2f}%)</span>", unsafe_allow_html=True)
+                            st.write(f"{asset_type_icon} **{asset_data['name']}**")
                             
-                            buy_shares = st.number_input("Number of Shares", min_value=1, value=1, key="buy_shares")
-                            total_cost = (stock_data['price'] * buy_shares) + st.session_state.game_settings['commission']
+                            # Format price display
+                            if asset_data.get('is_crypto') and asset_data['price'] < 1:
+                                price_display = f"${asset_data['price']:.6f}"
+                            else:
+                                price_display = f"${asset_data['price']:.2f}"
+                            st.write(f"**Current Price:** {price_display}")
+                            
+                            change_class = "positive" if asset_data['change'] >= 0 else "negative"
+                            st.markdown(f"**Change:** <span class='{change_class}'>${asset_data['change']:+.2f} ({asset_data['change_percent']:+.2f}%)</span>", unsafe_allow_html=True)
+                            
+                            # Shares/Units input
+                            unit_label = "Amount" if asset_data.get('is_crypto') else "Shares"
+                            if asset_data.get('is_crypto'):
+                                buy_amount = st.number_input(f"Number of {asset_display_name}", min_value=0.000001, value=1.0, step=0.1, format="%.6f", key="buy_amount")
+                            else:
+                                buy_amount = st.number_input("Number of Shares", min_value=1, value=1, key="buy_shares")
+                            
+                            total_cost = (asset_data['price'] * buy_amount) + st.session_state.game_settings['commission']
                             
                             st.write(f"**Total Cost:** ${total_cost:.2f}")
                             st.write(f"**Available Cash:** ${current_user['cash']:,.2f}")
                             
-                            if st.button("🛒 Buy Stock", key="buy_button"):
+                            buy_button_text = f"🛒 Buy {asset_display_name}"
+                            if st.button(buy_button_text, key="buy_button"):
                                 result = simulator.db.execute_trade(
                                     current_user['id'], 
-                                    selected_stock, 
+                                    selected_asset, 
                                     'BUY', 
-                                    buy_shares, 
-                                    stock_data['price'], 
-                                    stock_data['name']
+                                    buy_amount, 
+                                    asset_data['price'], 
+                                    asset_data['name']
                                 )
                                 if result['success']:
                                     st.success(result['message'])
                                     # Clear quick trade
-                                    if 'quick_trade_stock' in st.session_state:
-                                        del st.session_state.quick_trade_stock
+                                    if 'quick_trade_asset' in st.session_state:
+                                        del st.session_state.quick_trade_asset
                                         del st.session_state.quick_trade_action
                                     st.rerun()
                                 else:
                                     st.error(result['message'])
                 
                 with col2:
-                    st.write("### 📉 Sell Stocks")
+                    st.write("### 📉 Sell Assets")
                     
                     portfolio = simulator.db.get_user_portfolio(current_user['id'])
                     
                     if portfolio:
-                        owned_stocks = [''] + [p['symbol'] for p in portfolio]
+                        owned_assets = [''] + [p['symbol'] for p in portfolio]
                         default_sell_index = 0
                         
-                        # Pre-select stock from research tab if available
-                        if 'quick_trade_stock' in st.session_state and st.session_state.quick_trade_stock in owned_stocks:
+                        # Pre-select asset from research tab if available
+                        if 'quick_trade_asset' in st.session_state and st.session_state.quick_trade_asset in owned_assets:
                             if st.session_state.get('quick_trade_action') == 'SELL':
-                                default_sell_index = owned_stocks.index(st.session_state.quick_trade_stock)
+                                default_sell_index = owned_assets.index(st.session_state.quick_trade_asset)
                         
-                        selected_sell_stock = st.selectbox(
-                            "Select Stock to Sell",
-                            owned_stocks,
-                            key="sell_stock",
+                        selected_sell_asset = st.selectbox(
+                            "Select Asset to Sell",
+                            owned_assets,
+                            key="sell_asset",
                             index=default_sell_index
                         )
                         
-                        if selected_sell_stock:
-                            position = next((p for p in portfolio if p['symbol'] == selected_sell_stock), None)
-                            stock_data = simulator.get_stock_price(selected_sell_stock)
+                        if selected_sell_asset:
+                            position = next((p for p in portfolio if p['symbol'] == selected_sell_asset), None)
+                            asset_data = simulator.get_stock_price(selected_sell_asset)
                             
-                            if stock_data and position:
-                                st.write(f"**{stock_data['name']}**")
-                                st.write(f"**Shares Owned:** {position['shares']}")
-                                st.write(f"**Average Price:** ${position['avg_price']:.2f}")
-                                st.write(f"**Current Price:** ${stock_data['price']:.2f}")
+                            if asset_data and position:
+                                # Display asset info
+                                asset_display_name = selected_sell_asset.replace('-USD', '') if asset_data.get('is_crypto') else selected_sell_asset
+                                asset_type_icon = "🪙" if asset_data.get('is_crypto') else "📈"
+                                
+                                st.write(f"{asset_type_icon} **{asset_data['name']}**")
+                                
+                                # Units owned
+                                unit_label = "Amount" if asset_data.get('is_crypto') else "Shares"
+                                if asset_data.get('is_crypto'):
+                                    st.write(f"**{unit_label} Owned:** {position['shares']:.6f}")
+                                else:
+                                    st.write(f"**{unit_label} Owned:** {position['shares']}")
+                                
+                                # Prices
+                                st.write(f"**Average Price:** ${position['avg_price']:.6f}" if asset_data.get('is_crypto') and position['avg_price'] < 1 else f"**Average Price:** ${position['avg_price']:.2f}")
+                                st.write(f"**Current Price:** ${asset_data['price']:.6f}" if asset_data.get('is_crypto') and asset_data['price'] < 1 else f"**Current Price:** ${asset_data['price']:.2f}")
                                 
                                 # Show unrealized P&L
-                                unrealized_pl = (stock_data['price'] - position['avg_price']) * position['shares']
+                                unrealized_pl = (asset_data['price'] - position['avg_price']) * position['shares']
                                 pl_color = "positive" if unrealized_pl >= 0 else "negative"
                                 st.markdown(f"**Unrealized P&L:** <span class='{pl_color}'>${unrealized_pl:+.2f}</span>", unsafe_allow_html=True)
                                 
-                                sell_shares = st.number_input(
-                                    "Shares to Sell", 
-                                    min_value=1, 
-                                    max_value=position['shares'], 
-                                    value=1,
-                                    key="sell_shares"
-                                )
+                                # Amount to sell
+                                if asset_data.get('is_crypto'):
+                                    sell_amount = st.number_input(
+                                        f"{unit_label} to Sell", 
+                                        min_value=0.000001, 
+                                        max_value=float(position['shares']), 
+                                        value=min(1.0, float(position['shares'])),
+                                        step=0.1,
+                                        format="%.6f",
+                                        key="sell_amount"
+                                    )
+                                else:
+                                    sell_amount = st.number_input(
+                                        f"{unit_label} to Sell", 
+                                        min_value=1, 
+                                        max_value=position['shares'], 
+                                        value=1,
+                                        key="sell_shares"
+                                    )
                                 
-                                total_proceeds = (stock_data['price'] * sell_shares) - st.session_state.game_settings['commission']
-                                expected_pl = (stock_data['price'] - position['avg_price']) * sell_shares - st.session_state.game_settings['commission']
+                                total_proceeds = (asset_data['price'] * sell_amount) - st.session_state.game_settings['commission']
+                                expected_pl = (asset_data['price'] - position['avg_price']) * sell_amount - st.session_state.game_settings['commission']
                                 
                                 st.write(f"**Total Proceeds:** ${total_proceeds:.2f}")
                                 pl_color = "positive" if expected_pl >= 0 else "negative"
                                 st.markdown(f"**Expected P&L:** <span class='{pl_color}'>${expected_pl:+.2f}</span>", unsafe_allow_html=True)
                                 
-                                if st.button("💰 Sell Stock", key="sell_button"):
+                                sell_button_text = f"💰 Sell {asset_display_name}"
+                                if st.button(sell_button_text, key="sell_button"):
                                     result = simulator.db.execute_trade(
                                         current_user['id'], 
-                                        selected_sell_stock, 
+                                        selected_sell_asset, 
                                         'SELL', 
-                                        sell_shares, 
-                                        stock_data['price'], 
-                                        stock_data['name']
+                                        sell_amount, 
+                                        asset_data['price'], 
+                                        asset_data['name']
                                     )
                                     if result['success']:
                                         st.success(result['message'])
@@ -1119,14 +1353,14 @@ def main():
                                             else:
                                                 st.error(f"📉 Loss: ${result['profit_loss']:+.2f}")
                                         # Clear quick trade
-                                        if 'quick_trade_stock' in st.session_state:
-                                            del st.session_state.quick_trade_stock
+                                        if 'quick_trade_asset' in st.session_state:
+                                            del st.session_state.quick_trade_asset
                                             del st.session_state.quick_trade_action
                                         st.rerun()
                                     else:
                                         st.error(result['message'])
                     else:
-                        st.info("You don't own any stocks yet!")
+                        st.info("You don't own any assets yet!")
             
             with tab3:
                 st.subheader("📊 Your Portfolio")
